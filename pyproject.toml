@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "ozon_collector"
+version = "0.1.0"
+description = "A tool to collect and analyze search queries on Ozon, providing insights into trending products."
+authors = ["sergerdn <64213648+sergerdn@users.noreply.github.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+scrapy = "2.12.0"
+playwright = "1.49.1"
+scrapy-playwright = "0.0.42"
+brotli = "1.1.0"
+zstandard = "0.23.0"
+python-dotenv = "1.0.1"
+jinja2 = "3.1.4"
+rich = "13.9.4"
+
+[tool.poetry.group.dev.dependencies]
+black = "24.10.0"
+isort = "5.13.2"
+docconvert = "2.2.0"
+docformatter = "1.7.5"
+
+[tool.docformatter]
+recursive = true
+wrap-summaries = 120
+blank = false
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
