@@ -1,0 +1,42 @@
+name: Linux Python CI
+
+on:
+  push:
+    branches:
+      - develop
+      - master
+    tags:
+      - '*'
+  pull_request:
+    branches:
+      - develop
+      - master
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: true
+  APP_ENVIRONMENT: "test"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+jobs:
+  linux_lint:
+    runs-on: ubuntu-24.04 # https://github.com/actions/runner-images#available-images
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Setup Python and Poetry
+        uses: ./.github/actions/linux
+        with:
+          python-version: '3.12'
+
+      - name: Lint with mypy and flake8
+        run: |
+          poetry run mypy ozon_collector/
+          poetry run flake8 ozon_collector/

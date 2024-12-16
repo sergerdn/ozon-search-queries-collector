@@ -1,0 +1,72 @@
+name: 'Setup Python, Poetry, and Playwright'
+description: 'Set up Python, install Poetry, cache dependencies, install Playwright, and install all dependencies with Poetry.'
+
+inputs:
+  python-version:
+    description: 'Version of Python to use.'
+    required: true
+    default: '3.12'
+  gh-organization-token:
+    description: 'GitHub Access Token with access to the organization’s repositories for authentication and dependency management.'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout LFS objects
+      shell: bash
+      run: git lfs checkout
+
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        installer-parallel: true
+
+    - name: Cache Python dependencies
+      uses: actions/cache@v4
+      id: poetry-cache
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Verify Python and Poetry installation
+      shell: bash
+      run: |
+        python --version
+        poetry --version
+
+    - name: Install dependencies with Poetry
+      shell: bash
+      run: |
+        poetry config experimental.system-git-client true --local
+        poetry install --no-interaction --no-root
+
+    - name: Get installed Playwright version
+      id: playwright-version
+      shell: bash
+      run: |
+        PLAYWRIGHT_VERSION=$(poetry show playwright | grep "version" | awk '{print $3}')
+        echo "PLAYWRIGHT_VERSION=$PLAYWRIGHT_VERSION" >> "$GITHUB_ENV"
+
+    - name: Cache Playwright dependencies
+      uses: actions/cache@v4
+      id: playwright-cache
+      with:
+        path: ~/.cache/ms-playwright/
+        key: playwright-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}
+
+    - name: Install Playwright dependencies with Poetry
+      shell: bash
+      run: poetry run playwright install chromium --with-deps
+
+    - name: Verify Playwright installation
+      shell: bash
+      run: |
+        poetry run playwright -V
