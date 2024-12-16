@@ -8,6 +8,7 @@
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 import os
 from pathlib import Path
+from typing import List
 
 from dotenv import load_dotenv
 
@@ -48,7 +49,8 @@ CONCURRENT_REQUESTS_PER_IP = 2
 
 # Override the default request headers:
 DEFAULT_REQUEST_HEADERS = {
-    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,"
+    "image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
     "accept-language": "en-US,en;q=0.9,ru;q=0.8",
     "cache-control": "no-cache",
     "pragma": "no-cache",
@@ -106,7 +108,7 @@ AUTOTHROTTLE_DEBUG = False
 HTTPCACHE_ENABLED = False
 HTTPCACHE_EXPIRATION_SECS = 0
 HTTPCACHE_DIR = "httpcache"
-HTTPCACHE_IGNORE_HTTP_CODES = []
+HTTPCACHE_IGNORE_HTTP_CODES: List[int] = []
 HTTPCACHE_STORAGE = "scrapy.extensions.httpcache.FilesystemCacheStorage"
 
 # Set settings whose default value is deprecated to a future-proof value
@@ -116,10 +118,10 @@ FEED_EXPORT_ENCODING = "utf-8"
 RETRY_TIMES = 10
 RETRY_HTTP_CODES = [500, 502, 503, 504, 522, 524, 408, 429, 403]
 
-###################### Playwright settings ######################
+# Playwright settings
 DOWNLOAD_HANDLERS = {
-    "http": "ozon_collector.handler.CombinedDownloadHandler",
-    "https": "ozon_collector.handler.CombinedDownloadHandler",
+    "http": "ozon_collector.handlers.CombinedDownloadHandler",
+    "https": "ozon_collector.handlers.CombinedDownloadHandler",
 }
 
 # The browser type to be launched, e.g. chromium, firefox, webkit.
@@ -129,7 +131,5 @@ PLAYWRIGHT_DEFAULT_NAVIGATION_TIMEOUT = 30 * 1000  # 30 seconds
 BROWSER_PROFILE_STORAGE_DIR = get_browser_profile_storage()
 GOOGLE_CHROME_EXECUTABLE_PATH = get_chrome_executable_path()
 
-TEMPLATES_DIR: Path = (
-    Path(os.path.dirname(os.path.abspath(__file__))) / "spiders" / "templates"
-)
+TEMPLATES_DIR: Path = Path(os.path.dirname(os.path.abspath(__file__))) / "spiders" / "templates"
 assert TEMPLATES_DIR.exists()

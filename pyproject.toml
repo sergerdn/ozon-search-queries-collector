@@ -22,11 +22,37 @@ black = "24.10.0"
 isort = "5.13.2"
 docconvert = "2.2.0"
 docformatter = "1.7.5"
+mypy = "1.13.0"
+flake8 = "7.1.1"
 
 [tool.docformatter]
 recursive = true
 wrap-summaries = 120
 blank = false
+
+[tool.mypy]
+mypy_path = "ozon_collector"
+
+[[tool.mypy.overrides]]
+module = "scrapy_playwright.handler"
+ignore_missing_imports = true
+strict = true
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "ozon_collector.middlewares.*"
+ignore_missing_imports = true
+check_untyped_defs = false
+disallow_untyped_defs = false
+
+[tool.black]
+line-length = 120
+# skip-string-normalization = true
+
+[tool.isort]
+profile = "black"
+line_length = 120
+py_version = 310
 
 [build-system]
 requires = ["poetry-core"]

@@ -1,32 +1,31 @@
-import os
 import random
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any, Awaitable, Callable, Iterable, TypeVar
 
 import scrapy
 from jinja2 import Environment, FileSystemLoader
-from playwright.sync_api import BrowserContext, Page
-from scrapy import Request
-from scrapy.http import Response
+from playwright.sync_api import Page
+from scrapy.http.request import Request
+from scrapy.http.response import Response
 from scrapy.utils.project import get_project_settings
 
 from ozon_collector.items import OzonCollectorItem
 
+T = TypeVar("T")
 
-def log_execution_time(func: Callable) -> Callable:
+
+def log_execution_time(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
     """Decorator to log the execution time of a function."""
 
-    async def wrapper(*args, **kwargs):
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
         start_time = time.time()
         result = await func(*args, **kwargs)
         end_time = time.time()
         elapsed_time = end_time - start_time
         if hasattr(args[0], "logger"):  # Check if the first argument has a logger
-            args[0].logger.info(
-                f"Execution time for {func.__name__}: {elapsed_time:.2f} seconds."
-            )
+            args[0].logger.info(f"Execution time for {func.__name__}: {elapsed_time:.2f} seconds.")
         return result
 
     return wrapper
@@ -47,7 +46,7 @@ class OzonDataQuerySpider(scrapy.Spider):
     initial_keyword: str
     jinja2_env: Environment
 
-    def __init__(self, initial_keyword: str = "", *args, **kwargs):
+    def __init__(self, initial_keyword: str = "", *args: Any, **kwargs: Any) -> None:
         """Initialize the spider with the provided initial keyword and required configurations.
 
         Args:
@@ -62,26 +61,17 @@ class OzonDataQuerySpider(scrapy.Spider):
         settings = get_project_settings()
 
         # Configure Chrome executable path
-        self.chrome_executable_path: Path = settings.get(
-            "GOOGLE_CHROME_EXECUTABLE_PATH"
-        )
+        self.chrome_executable_path: Path = settings.get("GOOGLE_CHROME_EXECUTABLE_PATH")
         if not self.chrome_executable_path or not self.chrome_executable_path.exists():
             raise ValueError("Chrome executable path is not set or invalid.")
 
         # Configure browser profile storage
         self.browser_profile_storage: Path = settings.get("BROWSER_PROFILE_STORAGE_DIR")
-        if (
-            not self.browser_profile_storage
-            or not self.browser_profile_storage.exists()
-        ):
+        if not self.browser_profile_storage or not self.browser_profile_storage.exists():
             raise ValueError("Browser profile storage path is not set or invalid.")
 
         # Ensure at least one profile directory exists
-        profiles = [
-            dir_name
-            for dir_name in self.browser_profile_storage.iterdir()
-            if dir_name.is_dir()
-        ]
+        profiles = [dir_name for dir_name in self.browser_profile_storage.iterdir() if dir_name.is_dir()]
         if not profiles:
             default_profile = self.browser_profile_storage.joinpath("1")
             default_profile.mkdir()
@@ -97,17 +87,13 @@ class OzonDataQuerySpider(scrapy.Spider):
         """Generate the initial request to start data collection."""
 
         # Select a random browser profile directory
-        profiles = [
-            dir_name
-            for dir_name in self.browser_profile_storage.iterdir()
-            if dir_name.is_dir()
-        ]
+        profiles = [dir_name for dir_name in self.browser_profile_storage.iterdir() if dir_name.is_dir()]
         user_data_dir = profiles[random.randint(0, len(profiles) - 1)]
         self.logger.info("Using browser profile directory: %s", user_data_dir)
 
         yield scrapy.Request(
             url="https://data.ozon.ru/app/search-queries",
-            callback=self.parse_initial,
+            callback=self.parse_initial,  # type: ignore[arg-type]
             priority=0,
             dont_filter=True,
             meta={
@@ -150,7 +136,7 @@ class OzonDataQuerySpider(scrapy.Spider):
     async def parse_initial(self, response: Response, **kwargs: Any) -> Any:
         """Parse the initial page and handle login if necessary."""
         page: Page = response.meta["playwright_page"]
-        context: BrowserContext = page.context
+        # context: BrowserContext = page.context
 
         self.logger.debug(f"Current URL: {page.url}")
 

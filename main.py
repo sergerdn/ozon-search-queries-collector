@@ -13,7 +13,7 @@ from ozon_collector.spiders.OzonDataQuerySpider import OzonDataQuerySpider
 
 if __name__ == "__main__":
 
-    def main():
+    def main() -> None:
         settings = get_project_settings()
         print(settings.copy_to_dict())
 
