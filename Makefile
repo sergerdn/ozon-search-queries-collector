@@ -31,3 +31,8 @@ lint_fix:
 	docformatter --config pyproject.toml --black --in-place --recursive ozon_collector/ main.py || echo ""
 	poetry run black ozon_collector/ main.py
 	poetry run isort ozon_collector/ main.py
+
+lint:
+	poetry check
+	poetry run mypy ozon_collector/ main.py
+	poetry run flake8  ozon_collector/ main.py

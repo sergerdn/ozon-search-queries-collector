@@ -1,16 +1,15 @@
 import logging
-from typing import Type, TypeVar
+from typing import Any, Type, TypeVar
 
-from scrapy.core.downloader.handlers.http import HTTPDownloadHandler
+from scrapy import Spider
+from scrapy.core.downloader.handlers.http import HTTPDownloadHandler  # type: ignore[attr-defined]
 from scrapy.crawler import Crawler
-from scrapy.http import Request
-from scrapy_playwright.handler import ScrapyPlaywrightDownloadHandler
-from twisted.internet.defer import Deferred
-
-logger = logging.getLogger(__name__)
+from scrapy.http.request import Request
 from scrapy.utils.reactor import verify_installed_reactor
+from scrapy_playwright.handler import ScrapyPlaywrightDownloadHandler
 
 CombinedHandler = TypeVar("CombinedHandler", bound="CombinedDownloadHandler")
+logger = logging.getLogger(__name__)
 
 
 class CombinedDownloadHandler(HTTPDownloadHandler):
@@ -32,9 +31,7 @@ class CombinedDownloadHandler(HTTPDownloadHandler):
         # Initialize handlers
         self.playwright_handler = ScrapyPlaywrightDownloadHandler(crawler=crawler)
 
-        verify_installed_reactor(
-            "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
-        )
+        verify_installed_reactor("twisted.internet.asyncioreactor.AsyncioSelectorReactor")
 
         logger.debug("CombinedDownloadHandler initialized.")
 
@@ -50,7 +47,7 @@ class CombinedDownloadHandler(HTTPDownloadHandler):
         """
         return cls(crawler)
 
-    def download_request(self, request: Request, spider) -> Deferred:
+    def download_request(self, request: Request, spider: Spider) -> Any:
         """Process the download request by delegating it to the appropriate handler.
 
         Args:
