@@ -16,15 +16,15 @@
   async function parallelPaginateRequests(keyword_query, maxRetries) {
     const baseURL = "https://data.ozon.ru/api/searchstat_analytics/queries_search";
     const headers = {
-      "accept": "application/json, text/plain, */*",
+      accept: "application/json, text/plain, */*",
       "cache-control": "no-cache",
       "content-type": "application/json",
-      "pragma": "no-cache",
+      pragma: "no-cache",
       "sec-fetch-dest": "empty",
       "sec-fetch-mode": "cors",
       "sec-fetch-site": "same-origin",
       "x-o3-app-name": "exa-ui",
-      "x-o3-app-version": "release/EXAR-634",
+      "x-o3-app-version": "release/EXAR-797_835",
       "x-o3-language": "ru",
     };
 
@@ -64,9 +64,7 @@
         }
 
         if (retriesLeft > 0) {
-          console.warn(
-              `[Retry] Request failed. Retrying... (${maxRetries - retriesLeft + 1}/${maxRetries})`
-          );
+          console.warn(`[Retry] Request failed. Retrying... (${maxRetries - retriesLeft + 1}/${maxRetries})`);
           return fetchWithRetry(requestBody, retriesLeft - 1);
         } else {
           console.error(`[Error] Request failed after ${maxRetries} retries.`);
@@ -81,7 +79,7 @@
         limit: paginationLimit.toString(),
         offset: "0",
         text: keyword_query,
-        sorting: {order: "desc", attribute: "count"},
+        sorting: { order: "desc", attribute: "count" },
       });
 
       const initialData = await fetchWithRetry(initialRequestBody);
@@ -90,13 +88,13 @@
 
       // Step 2: Generate all offset-based requests
       const totalRequests = Math.ceil(totalItems / paginationLimit);
-      const requests = Array.from({length: totalRequests}, (_, i) => {
+      const requests = Array.from({ length: totalRequests }, (_, i) => {
         const offset = i * paginationLimit;
         const requestBody = JSON.stringify({
           limit: paginationLimit.toString(),
           offset: offset.toString(),
           text: keyword_query,
-          sorting: {order: "desc", attribute: "count"},
+          sorting: { order: "desc", attribute: "count" },
         });
 
         return fetchWithRetry(requestBody); // Use fetchWithRetry for parallel requests
@@ -135,6 +133,7 @@
   try {
     const capturedData = await parallelPaginateRequests(keywordQuery, maxRetries);
     console.log("All captured data:", JSON.stringify(capturedData));
+
     return capturedData;
   } catch (error) {
     if (error instanceof UnauthorizedError) {
