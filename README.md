@@ -51,14 +51,18 @@ This project collects detailed search query data from Ozon:
 3. Configure your environment variables in `.env.development`:
     - `BROWSER_PROFILE_STORAGE_DIR`: Directory for persistent browser profiles.
 
-## **Usage**
+### **Usage**
 
-Run the spider using Scrapy with an initial keyword.
-
-For example:
+To run the spider with an initial keyword and output the results to a file, use the following command:
 
 ```bash
 scrapy crawl ozon_data_query_spider -a initial_query_keyword="дозатор для жидкого мыла" -o items.json
+```
+
+To enable **depth parsing** (i.e., parsing multiple queries from the initial search result), use the following command:
+
+```bash
+scrapy crawl ozon_data_query_spider -a initial_query_keyword="дозатор для жидкого мыла" -o items.json -a parse_in_depth=True
 ```
 
 ### **First-Time Setup**
@@ -139,3 +143,37 @@ Example:
 
 The spider includes enhanced logging and execution time tracking for debugging and performance monitoring.
 
+```txt
+INFO: Execution time for execute_js_in_browser: 5.04 seconds.
+INFO: Execution time for execute_js_in_browser: 5.01 seconds.
+```
+
+```txt
+INFO: Crawled 1 pages (at 1 pages/min), scraped 1058 items (at 1058 items/min)
+INFO: Crawled 1 pages (at 0 pages/min), scraped 1209 items (at 151 items/min)
+INFO: Crawled 1 pages (at 0 pages/min), scraped 1375 items (at 166 items/min)
+INFO: Crawled 1 pages (at 0 pages/min), scraped 1428 items (at 53 items/min)
+INFO: Crawled 1 pages (at 0 pages/min), scraped 1547 items (at 119 items/min)
+INFO: Crawled 1 pages (at 0 pages/min), scraped 1805 items (at 258 items/min)
+INFO: Crawled 1 pages (at 0 pages/min), scraped 1842 items (at 37 items/min)
+INFO: Crawled 1 pages (at 0 pages/min), scraped 2961 items (at 1119 items/min)
+INFO: Crawled 1 pages (at 0 pages/min), scraped 3084 items (at 123 items/min)
+INFO: Crawled 1 pages (at 0 pages/min), scraped 3202 items (at 118 items/min)
+INFO: Crawled 1 pages (at 0 pages/min), scraped 3477 items (at 275 items/min)
+INFO: Crawled 1 pages (at 0 pages/min), scraped 3558 items (at 81 items/min)
+INFO: Crawled 1 pages (at 0 pages/min), scraped 4070 items (at 512 items/min)
+INFO: Crawled 1 pages (at 0 pages/min), scraped 4157 items (at 87 items/min)
+INFO: Crawled 1 pages (at 0 pages/min), scraped 4502 items (at 345 items/min)
+```
+
+---
+
+## Tips and Tricks
+
+It is very likely that Ozon uses an `anti-bot system to prevent scraping`.
+
+If you run multiple browsers simultaneously using the same account across all browser profiles, Ozon can quickly detect
+the activity and log the account out of all profiles.
+
+If JavaScript code execution within the same browser profile collects data too quickly, it can also trigger Ozon
+detection system and cause the account to be logged out.

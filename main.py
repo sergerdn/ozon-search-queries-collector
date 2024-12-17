@@ -20,9 +20,10 @@ if __name__ == "__main__":
         # Enhance settings dynamically
         settings.set("CONCURRENT_REQUESTS", 1)
         settings.set("PLAYWRIGHT_BROWSER_TYPE", "chromium")
+        settings.set("DEPTH_LIMIT", 1)
 
         process = CrawlerProcess(settings=settings)
-        process.crawl(OzonDataQuerySpider, initial_query_keyword="сыр")
+        process.crawl(OzonDataQuerySpider, initial_query_keyword="сыр", parse_in_depth=True)
         process.start()
 
     main()
