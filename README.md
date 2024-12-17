@@ -172,8 +172,11 @@ INFO: Crawled 1 pages (at 0 pages/min), scraped 4502 items (at 345 items/min)
 
 It is very likely that Ozon uses an `anti-bot system to prevent scraping`.
 
-If you run multiple browsers simultaneously using the same account across all browser profiles, Ozon can quickly detect
-the activity and log the account out of all profiles.
+- If you run multiple browsers simultaneously using the same account across all browser profiles, Ozon can quickly
+  detect the activity and log the account out of all profiles.
 
-If JavaScript code execution within the same browser profile collects data too quickly, it can also trigger Ozon
-detection system and cause the account to be logged out.
+- If JavaScript code execution within the same browser profile collects data too quickly, it can also trigger Ozon's
+  detection system and cause the account to be logged out.
+
+- Additionally, if the page is refreshed too quickly within the same browser profile, it may also trigger Ozon's
+  anti-bot system and result in the account being logged out.
