@@ -2,10 +2,12 @@ import datetime
 import random
 import time
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, Iterable, Set, TypeVar
+from typing import Any, AsyncGenerator, Awaitable, Callable, Dict, Iterable, Set, TypeVar
+from urllib.parse import quote_plus
 
 import scrapy
 from jinja2 import Environment, FileSystemLoader
+from playwright.async_api import BrowserContext
 from playwright.sync_api import Page
 from scrapy import signals
 from scrapy.http.request import Request
@@ -66,7 +68,11 @@ class OzonDataQuerySpider(scrapy.Spider):
     initial_query_keyword: str
     jinja2_env: Environment
 
-    def __init__(self, initial_query_keyword: str = "", *args: Any, **kwargs: Any) -> None:
+    parse_in_depth: bool  # Flag to control depth of parsing
+
+    def __init__(
+        self, initial_query_keyword: str = "", parse_in_depth: bool = False, *args: Any, **kwargs: Any
+    ) -> None:
         """Initialize the spider with the provided initial keyword and required configurations.
 
         Args:
@@ -77,6 +83,7 @@ class OzonDataQuerySpider(scrapy.Spider):
 
         self.initial_query_keyword = initial_query_keyword.strip()
         self.logger.info("Initial query keyword: %s", self.initial_query_keyword)
+        self.parse_in_depth = parse_in_depth
 
         # Get Scrapy settings
         settings = get_project_settings()
@@ -136,8 +143,10 @@ class OzonDataQuerySpider(scrapy.Spider):
         playwright_context_kwargs["user_data_dir"] = str(user_data_dir)
         playwright_context_kwargs["executable_path"] = str(self.chrome_executable_path)
 
+        # The URL is dynamically generated only for Scrapy's deduplicated scheduler; websites don't need this.
+        url = "https://data.ozon.ru/app/search-queries?__%s" % quote_plus(self.initial_query_keyword)
         yield scrapy.Request(
-            url="https://data.ozon.ru/app/search-queries",
+            url=url,
             callback=self.parse_search_queries,  # type: ignore[arg-type]
             priority=0,
             dont_filter=True,
@@ -165,39 +174,25 @@ class OzonDataQuerySpider(scrapy.Spider):
         self.logger.info("Executing JavaScript in the browser.")
         return await page.evaluate(rendered_js)
 
-    async def parse_search_queries(self, response: Response, **kwargs: Any) -> Any:
-        """Parse the initial page and handle login if necessary."""
-        page: Page = response.meta["playwright_page"]
-        # context: BrowserContext = page.context  # type: ignore[assignment]
-
-        self.logger.debug(f"Current URL: {page.url}")
-
-        # Wait for the user to log in if necessary
-        expected_url = "https://data.ozon.ru/app/search-queries"
-        while not page.url.startswith(expected_url):
-            self.logger.warning("User is not logged in to Ozon.")
-            self.logger.info("Please log in to Ozon with your credentials.")
-            breakpoint()  # Pause for manual intervention
-
-        self.logger.info("User successfully logged in.")
-
-        # Render the JavaScript template
+    async def _render_execute_and_get_items(
+        self, page: Page, query_keyword: str
+    ) -> AsyncGenerator[OzonCollectorItem, None]:
+        """Render the JS for a query, execute it, and yield items."""
         template = self.jinja2_env.get_template("collect_search_queries.js.j2")
         rendered_js = template.render(
-            keyword_query=self.initial_query_keyword,
+            keyword_query=query_keyword,
             max_retries=5,
         )
 
-        # Execute the rendered JavaScript in the browser
+        # Execute the rendered JavaScript on the page
         result = await self.execute_js_in_browser(page, rendered_js)
+
+        # If the result is not a list, log and return
         if not isinstance(result, list):
             self.logger.warning("Result is not a list.")
             return
 
-        query_keyword = response.meta["query_keyword"]
-        parsed_keywords: Set[str] = set()
-
-        # Process items
+        # Process and yield items
         for entry in result:
             assert isinstance(entry, dict)
             ordered_entry = {
@@ -208,8 +203,39 @@ class OzonDataQuerySpider(scrapy.Spider):
             item = OzonCollectorItem(**ordered_entry)
             yield item
 
-            parsed_keywords.add(item["query"])
+    async def parse_search_queries(self, response: Response, **kwargs: Any) -> Any:
+        """Parse the initial page and handle login if necessary."""
+        page: Page = response.meta["playwright_page"]
+        context: BrowserContext = page.context  # type: ignore[assignment]
 
+        self.logger.debug(f"Current URL: {page.url}, page:{page}, context: {context}")
+
+        # Wait for the user to log in if necessary
+        expected_url = "https://data.ozon.ru/app/search-queries"
+        while not page.url.startswith(expected_url):
+            self.logger.warning("User is not logged in to Ozon.")
+            self.logger.info("Please log in to Ozon with your credentials.")
+            breakpoint()  # Pause for manual intervention
+
+        self.logger.info("User successfully logged in.")
+
+        query_keyword = response.meta["query_keyword"]
+        parsed_keywords: Set[str] = set()
+
+        async for item in self._render_execute_and_get_items(page, query_keyword):
+            parsed_keywords.add(item["query"])
+            yield item
+
+        # Collect the keywords parsed during this step
         self.logger.debug(f"Parsed {len(parsed_keywords)} keywords from query '{query_keyword}': {parsed_keywords}")
+
+        if self.parse_in_depth:
+            for query_keyword in parsed_keywords:
+                url = "https://data.ozon.ru/app/search-queries?__%s" % quote_plus(query_keyword)
+                # Change the URL in the browser's address bar without reloading
+                await page.evaluate(f"window.history.pushState(null, '', '{url}')")
+
+                async for item in self._render_execute_and_get_items(page, query_keyword):
+                    yield item
 
         self.logger.info("Finished.")
