@@ -7,8 +7,10 @@ from typing import Any, Awaitable, Callable, Dict, Iterable, Set, TypeVar
 import scrapy
 from jinja2 import Environment, FileSystemLoader
 from playwright.sync_api import Page
+from scrapy import signals
 from scrapy.http.request import Request
 from scrapy.http.response import Response
+from scrapy.signalmanager import dispatcher  # type: ignore[attr-defined]
 from scrapy.utils.project import get_project_settings
 
 from ozon_collector.items import OzonCollectorItem
@@ -71,6 +73,7 @@ class OzonDataQuerySpider(scrapy.Spider):
             initial_query_keyword (str): The keyword to start data collection. Defaults to an empty string.
         """
         super().__init__(*args, **kwargs)
+        dispatcher.connect(self.spider_idle_handler, signal=signals.spider_idle)
 
         self.initial_query_keyword = initial_query_keyword.strip()
         self.logger.info("Initial query keyword: %s", self.initial_query_keyword)
@@ -100,6 +103,25 @@ class OzonDataQuerySpider(scrapy.Spider):
         if not templates_dir or not templates_dir.exists():
             raise ValueError("Template directory path is not set or invalid.")
         self.jinja2_env = Environment(loader=FileSystemLoader(templates_dir))
+
+    def spider_idle_handler(self) -> None:
+        """This handler is called when Scrapy is idle, i.e., when there are no more requests left in the queue to
+        process.
+
+        The function currently logs that the spider is idle. In the future, this function can be extended to trigger an
+        external API or action to fetch more requests dynamically. These new requests will then be added to the Scrapy
+        scheduler to keep the spider active and scraping data.
+
+        Future extensions could include:
+            - Fetching new requests from an external API when the queue is empty.
+            - Retrieving new data from other sources such as databases or file systems.
+            - Implementing logic to handle different types of requests or conditions before fetching more tasks.
+
+        The ultimate goal is to ensure the spider continues to scrape data seamlessly, even when the queue is empty,
+        by fetching new tasks dynamically and keeping the spider running.
+        """
+
+        self.logger.info("Spider is idle. Triggering external API or action to add more requests.")
 
     def start_requests(self) -> Iterable[Request]:
         """Generate the initial request to start data collection."""
@@ -188,6 +210,6 @@ class OzonDataQuerySpider(scrapy.Spider):
 
             parsed_keywords.add(item["query"])
 
-        self.logger.debug(f"Got parsed keywords: {parsed_keywords} from query keyword: {query_keyword}")
+        self.logger.debug(f"Parsed {len(parsed_keywords)} keywords from query '{query_keyword}': {parsed_keywords}")
 
         self.logger.info("Finished.")
