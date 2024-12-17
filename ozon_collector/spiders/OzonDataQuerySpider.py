@@ -42,6 +42,10 @@ basic_playwright_context_kwargs: Dict[str, Any] = {
 }
 
 
+class RequestLimitExceededException(Exception):
+    pass
+
+
 def log_execution_time(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
     """Decorator to log the execution time of a function."""
 
@@ -223,11 +227,20 @@ class OzonDataQuerySpider(scrapy.Spider):
         page: Page = response.meta["playwright_page"]
         context: BrowserContext = page.context  # type: ignore[assignment]
 
-        self.logger.debug(f"Current URL: {page.url}, page:{page}, context: {context}")
+        page_url = page.url
+        self.logger.debug(f"Current URL: {page_url}, page:{page}, context: {context}")
+
+        # Log the page URL for debugging purposes
+        self.logger.info(f"Current page URL: {page_url}")
 
         # Wait for the user to log in if necessary
         expected_url = "https://data.ozon.ru/app/search-queries"
         while not page.url.startswith(expected_url):
+            # Check if the page has reached the request limit
+            if page.url == "https://data.ozon.ru/app/requests-limit":
+                self.logger.warning("Request limit exceeded. Raising exception.")
+                raise RequestLimitExceededException("Ozon request limit reached.")
+
             self.logger.warning("User is not logged in to Ozon.")
             self.logger.info("Please log in to Ozon with your credentials.")
             breakpoint()  # Pause for manual intervention
