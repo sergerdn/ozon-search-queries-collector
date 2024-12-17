@@ -1,4 +1,5 @@
 import datetime
+import logging
 import random
 import time
 from pathlib import Path
@@ -14,10 +15,13 @@ from scrapy.http.request import Request
 from scrapy.http.response import Response
 from scrapy.signalmanager import dispatcher  # type: ignore[attr-defined]
 from scrapy.utils.project import get_project_settings
+from tenacity import before_log, retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from ozon_collector.items import OzonCollectorItem
 
 T = TypeVar("T")
+
+logger = logging.getLogger(__name__)
 
 # Basic Playwright settings
 basic_playwright_context_kwargs: Dict[str, Any] = {
@@ -174,6 +178,14 @@ class OzonDataQuerySpider(scrapy.Spider):
         self.logger.info("Executing JavaScript in the browser.")
         return await page.evaluate(rendered_js)
 
+    # Apply retry logic with Tenacity
+    @retry(
+        retry=retry_if_exception_type(ValueError),  # Retry only on ValueError (invalid item type)
+        stop=stop_after_attempt(3),  # Retry up to 3 times
+        wait=wait_exponential(multiplier=1, min=4, max=10),  # Exponential backoff
+        before=before_log(logger, logging.DEBUG),  # Log before each retry attempt
+        reraise=True,  # Reraise the exception if retries fail
+    )
     async def _render_execute_and_get_items(
         self, page: Page, query_keyword: str
     ) -> AsyncGenerator[OzonCollectorItem, None]:
@@ -187,14 +199,17 @@ class OzonDataQuerySpider(scrapy.Spider):
         # Execute the rendered JavaScript on the page
         result = await self.execute_js_in_browser(page, rendered_js)
 
-        # If the result is not a list, log and return
+        # If the result is not a list, log and raise an error
         if not isinstance(result, list):
-            self.logger.warning("Result is not a list.")
-            return
+            self.logger.error(f"Expected list, but got {type(result)}. Raising ValueError.")
+            raise ValueError(f"Expected list, but got {type(result)}")
 
         # Process and yield items
         for entry in result:
-            assert isinstance(entry, dict)
+            if not isinstance(entry, dict):
+                self.logger.error("Expected dict, but got invalid result.")
+                raise ValueError("Expected dict but got something else")
+
             ordered_entry = {
                 "_query_keyword": query_keyword,
                 "_scraped_at": datetime.datetime.now(datetime.UTC).isoformat(),
