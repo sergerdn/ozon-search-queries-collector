@@ -3,7 +3,7 @@ import logging
 import random
 import time
 from pathlib import Path
-from typing import Any, AsyncGenerator, Awaitable, Callable, Dict, Iterable, Set, TypeVar
+from typing import Any, Awaitable, Callable, Dict, Iterable, List, Set, TypeVar
 from urllib.parse import quote_plus
 
 import scrapy
@@ -15,7 +15,7 @@ from scrapy.http.request import Request
 from scrapy.http.response import Response
 from scrapy.signalmanager import dispatcher  # type: ignore[attr-defined]
 from scrapy.utils.project import get_project_settings
-from tenacity import before_log, retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import after_log, before_log, retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from ozon_collector.items import OzonCollectorItem
 
@@ -184,15 +184,14 @@ class OzonDataQuerySpider(scrapy.Spider):
 
     # Apply retry logic with Tenacity
     @retry(
-        retry=retry_if_exception_type(ValueError),  # Retry only on ValueError (invalid item type)
-        stop=stop_after_attempt(3),  # Retry up to 3 times
+        retry=retry_if_exception_type(Exception),
+        stop=stop_after_attempt(5),  # Retry up to 5 times
         wait=wait_exponential(multiplier=1, min=4, max=10),  # Exponential backoff
         before=before_log(logger, logging.DEBUG),  # Log before each retry attempt
+        after=after_log(logger, logging.DEBUG),
         reraise=True,  # Reraise the exception if retries fail
     )
-    async def _render_execute_and_get_items(
-        self, page: Page, query_keyword: str
-    ) -> AsyncGenerator[OzonCollectorItem, None]:
+    async def _render_execute_and_get_items(self, page: Page, query_keyword: str) -> List[OzonCollectorItem]:
         """Render the JS for a query, execute it, and yield items."""
         template = self.jinja2_env.get_template("collect_search_queries.js.j2")
         rendered_js = template.render(
@@ -204,11 +203,12 @@ class OzonDataQuerySpider(scrapy.Spider):
         result = await self.execute_js_in_browser(page, rendered_js)
 
         # If the result is not a list, log and raise an error
-        if not isinstance(result, list):
+        if not isinstance(result, list) or len(result) == 0:
             self.logger.error(f"Expected list, but got {type(result)}. Raising ValueError.")
             raise ValueError(f"Expected list, but got {type(result)}")
 
-        # Process and yield items
+        # Process items
+        items = []
         for entry in result:
             if not isinstance(entry, dict):
                 self.logger.error("Expected dict, but got invalid result.")
@@ -220,7 +220,9 @@ class OzonDataQuerySpider(scrapy.Spider):
             }
             ordered_entry.update(entry)
             item = OzonCollectorItem(**ordered_entry)
-            yield item
+            items.append(item)
+
+        return items
 
     async def parse_search_queries(self, response: Response, **kwargs: Any) -> Any:
         """Parse the initial page and handle login if necessary."""
@@ -250,7 +252,8 @@ class OzonDataQuerySpider(scrapy.Spider):
         query_keyword = response.meta["query_keyword"]
         parsed_keywords: Set[str] = set()
 
-        async for item in self._render_execute_and_get_items(page, query_keyword):
+        items = await self._render_execute_and_get_items(page, query_keyword)
+        for item in items:
             parsed_keywords.add(item["query"])
             yield item
 
@@ -263,7 +266,8 @@ class OzonDataQuerySpider(scrapy.Spider):
                 # Change the URL in the browser's address bar without reloading
                 await page.evaluate(f"window.history.pushState(null, '', '{url}')")
 
-                async for item in self._render_execute_and_get_items(page, query_keyword):
+                items = await self._render_execute_and_get_items(page, query_keyword)
+                for item in items:
                     yield item
 
         self.logger.info("Finished.")
