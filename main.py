@@ -22,7 +22,7 @@ if __name__ == "__main__":
         settings.set("PLAYWRIGHT_BROWSER_TYPE", "chromium")
 
         process = CrawlerProcess(settings=settings)
-        process.crawl(OzonDataQuerySpider, initial_keyword="сыр")
+        process.crawl(OzonDataQuerySpider, initial_query_keyword="сыр")
         process.start()
 
     main()

@@ -12,7 +12,7 @@ class OzonCollectorItem(scrapy.Item):
     Represents a single entry in the data with fields corresponding to JSON keys.
     """
 
-    _keyword = scrapy.Field()  # keyword
+    _query_keyword = scrapy.Field()  # keyword
     _scraped_at = scrapy.Field()  # Timestamp of when the data was scraped
 
     avgCaRub = scrapy.Field()  # Average price, ₽

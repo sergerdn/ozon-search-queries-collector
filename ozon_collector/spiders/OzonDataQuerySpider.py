@@ -2,7 +2,7 @@ import datetime
 import random
 import time
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, Iterable, TypeVar
+from typing import Any, Awaitable, Callable, Dict, Iterable, Set, TypeVar
 
 import scrapy
 from jinja2 import Environment, FileSystemLoader
@@ -61,19 +61,19 @@ class OzonDataQuerySpider(scrapy.Spider):
     start_urls = ["https://www.ozon.ru"]
     chrome_executable_path: Path
     browser_profile_storage: Path
-    initial_keyword: str
+    initial_query_keyword: str
     jinja2_env: Environment
 
-    def __init__(self, initial_keyword: str = "", *args: Any, **kwargs: Any) -> None:
+    def __init__(self, initial_query_keyword: str = "", *args: Any, **kwargs: Any) -> None:
         """Initialize the spider with the provided initial keyword and required configurations.
 
         Args:
-            initial_keyword (str): The keyword to start data collection. Defaults to an empty string.
+            initial_query_keyword (str): The keyword to start data collection. Defaults to an empty string.
         """
         super().__init__(*args, **kwargs)
 
-        self.initial_keyword = initial_keyword.strip()
-        self.logger.info("Initial keyword: %s", self.initial_keyword)
+        self.initial_query_keyword = initial_query_keyword.strip()
+        self.logger.info("Initial query keyword: %s", self.initial_query_keyword)
 
         # Get Scrapy settings
         settings = get_project_settings()
@@ -116,11 +116,12 @@ class OzonDataQuerySpider(scrapy.Spider):
 
         yield scrapy.Request(
             url="https://data.ozon.ru/app/search-queries",
-            callback=self.parse_initial,  # type: ignore[arg-type]
+            callback=self.parse_search_queries,  # type: ignore[arg-type]
             priority=0,
             dont_filter=True,
             meta={
                 "dont_cache": True,
+                "query_keyword": self.initial_query_keyword,
                 "max_retry_times": 100,
                 "playwright": True,
                 "playwright_include_page": True,
@@ -142,10 +143,10 @@ class OzonDataQuerySpider(scrapy.Spider):
         self.logger.info("Executing JavaScript in the browser.")
         return await page.evaluate(rendered_js)
 
-    async def parse_initial(self, response: Response, **kwargs: Any) -> Any:
+    async def parse_search_queries(self, response: Response, **kwargs: Any) -> Any:
         """Parse the initial page and handle login if necessary."""
         page: Page = response.meta["playwright_page"]
-        # context: BrowserContext = page.context
+        # context: BrowserContext = page.context  # type: ignore[assignment]
 
         self.logger.debug(f"Current URL: {page.url}")
 
@@ -161,7 +162,7 @@ class OzonDataQuerySpider(scrapy.Spider):
         # Render the JavaScript template
         template = self.jinja2_env.get_template("collect_search_queries.js.j2")
         rendered_js = template.render(
-            keyword_query=self.initial_keyword,
+            keyword_query=self.initial_query_keyword,
             max_retries=5,
         )
 
@@ -171,16 +172,22 @@ class OzonDataQuerySpider(scrapy.Spider):
             self.logger.warning("Result is not a list.")
             return
 
+        query_keyword = response.meta["query_keyword"]
+        parsed_keywords: Set[str] = set()
+
         # Process items
         for entry in result:
             assert isinstance(entry, dict)
             ordered_entry = {
-                "_keyword": self.initial_keyword,
+                "_query_keyword": query_keyword,
                 "_scraped_at": datetime.datetime.now(datetime.UTC).isoformat(),
             }
             ordered_entry.update(entry)
             item = OzonCollectorItem(**ordered_entry)
-
             yield item
+
+            parsed_keywords.add(item["query"])
+
+        self.logger.debug(f"Got parsed keywords: {parsed_keywords} from query keyword: {query_keyword}")
 
         self.logger.info("Finished.")

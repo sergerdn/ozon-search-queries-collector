@@ -12,7 +12,7 @@ This project collects detailed search query data from Ozon:
 
 ### Meta data:
 
-- **`_keyword`**: The initial keyword used to generate the data.
+- **`_query_keyword`**: The initial keyword used to generate the data.
 - **`_scraped_at`**: Timestamp of when the data was scraped.
 
 ### Scraped data:
@@ -58,7 +58,7 @@ Run the spider using Scrapy with an initial keyword.
 For example:
 
 ```bash
-scrapy crawl ozon_data_query_spider -a initial_keyword="дозатор для жидкого мыла" -o items.json
+scrapy crawl ozon_data_query_spider -a initial_query_keyword="дозатор для жидкого мыла" -o items.json
 ```
 
 ### **First-Time Setup**
@@ -70,7 +70,7 @@ Follow these steps:
 
 1. **Run the script for the first time**:
    ```bash
-   scrapy crawl ozon_data_query_spider -a initial_keyword="дозатор для жидкого мыла"
+   scrapy crawl ozon_data_query_spider -a initial_query_keyword="дозатор для жидкого мыла"
    ```
 2. **Manual Login**: The browser will open automatically, prompting you to log in to Ozon. Enter your credentials and
    complete the login process.
@@ -78,7 +78,7 @@ Follow these steps:
    browser profile, enabling future automated logins.
 4. **Re-run the script**:
    ```bash
-   scrapy crawl ozon_data_query_spider -a initial_keyword="дозатор для жидкого мыла"
+   scrapy crawl ozon_data_query_spider -a initial_query_keyword="дозатор для жидкого мыла"
    ```
 
 From the second run onward, the script will reuse the saved session to access the Ozon service.
@@ -92,7 +92,7 @@ Example:
 ```json
 [
   {
-    "_keyword": "дозатор для жидкого мыла",
+    "_query_keyword": "дозатор для жидкого мыла",
     "_scraped_at": "2024-12-16T09:39:08.157158",
     "avgCaRub": 1050.92,
     "avgCountItems": 6592.7656,
@@ -104,7 +104,7 @@ Example:
     "uniqSellers": 35.900585
   },
   {
-    "_keyword": "дозатор для жидкого мыла",
+    "_query_keyword": "дозатор для жидкого мыла",
     "_scraped_at": "2024-12-16T09:39:08.158146",
     "avgCaRub": 436.66,
     "avgCountItems": 21091.857,
