@@ -13,6 +13,13 @@
     }
   }
 
+  class RateLimitError extends Error {
+    constructor(message) {
+      super(message);
+      this.name = "RateLimitError";
+    }
+  }
+
   async function parallelPaginateRequests(keyword_query, maxRetries) {
     const baseURL = "https://data.ozon.ru/api/searchstat_analytics/queries_search";
     const headers = {
@@ -51,6 +58,9 @@
         if (response.status === 403) {
           throw new ForbiddenError("Request blocked: Forbidden (403)");
         }
+        if (response.status === 429) {
+          throw new RateLimitError("Request limited: Too Many Requests (429)");
+        }
 
         if (!response.ok) {
           throw new Error(`Request failed with status: ${response.status}`);
@@ -58,7 +68,7 @@
 
         return await response.json();
       } catch (error) {
-        if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
+        if (error instanceof UnauthorizedError || error instanceof ForbiddenError || error instanceof RateLimitError) {
           console.error(`[Abort] ${error.message}`);
           throw error;
         }
