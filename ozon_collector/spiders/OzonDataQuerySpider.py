@@ -2,7 +2,7 @@ import datetime
 import random
 import time
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Iterable, TypeVar
+from typing import Any, Awaitable, Callable, Dict, Iterable, TypeVar
 
 import scrapy
 from jinja2 import Environment, FileSystemLoader
@@ -14,6 +14,24 @@ from scrapy.utils.project import get_project_settings
 from ozon_collector.items import OzonCollectorItem
 
 T = TypeVar("T")
+
+# Basic Playwright settings
+basic_playwright_context_kwargs: Dict[str, Any] = {
+    "args": [
+        "--disable-blink-features=AutomationControlled",
+        "--disk-cache-size=%d" % 524288000,  # 500 MB
+    ],
+    "viewport": {"width": 1920, "height": 1080},
+    "locale": "en-US,en,ru",
+    "geolocation": {
+        "latitude": 55.782463,
+        "longitude": 37.596637,
+        "accuracy": 90,
+    },
+    "timezone_id": "Europe/Moscow",
+    "permissions": ["geolocation"],
+    "headless": False,
+}
 
 
 def log_execution_time(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
@@ -91,6 +109,11 @@ class OzonDataQuerySpider(scrapy.Spider):
         user_data_dir = profiles[random.randint(0, len(profiles) - 1)]
         self.logger.info("Using browser profile directory: %s", user_data_dir)
 
+        # Extend the base dictionary with specific settings
+        playwright_context_kwargs = basic_playwright_context_kwargs.copy()
+        playwright_context_kwargs["user_data_dir"] = str(user_data_dir)
+        playwright_context_kwargs["executable_path"] = str(self.chrome_executable_path)
+
         yield scrapy.Request(
             url="https://data.ozon.ru/app/search-queries",
             callback=self.parse_initial,  # type: ignore[arg-type]
@@ -101,24 +124,7 @@ class OzonDataQuerySpider(scrapy.Spider):
                 "max_retry_times": 100,
                 "playwright": True,
                 "playwright_include_page": True,
-                "playwright_context_kwargs": {
-                    "user_data_dir": str(user_data_dir),
-                    "executable_path": str(self.chrome_executable_path),
-                    "args": [
-                        "--disable-blink-features=AutomationControlled",
-                        "--disk-cache-size=%d" % 524288000,  # 500 MB
-                    ],
-                    "viewport": {"width": 1920, "height": 1080},
-                    "locale": "en-US,en,ru",
-                    "geolocation": {
-                        "latitude": 55.782463,
-                        "longitude": 37.596637,
-                        "accuracy": 90,
-                    },
-                    "timezone_id": "Europe/Moscow",
-                    "permissions": ["geolocation"],
-                    "headless": False,
-                },
+                "playwright_context_kwargs": playwright_context_kwargs,
             },
         )
 
