@@ -1,6 +1,6 @@
+import datetime
 import random
 import time
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Iterable, TypeVar
 
@@ -104,7 +104,10 @@ class OzonDataQuerySpider(scrapy.Spider):
                 "playwright_context_kwargs": {
                     "user_data_dir": str(user_data_dir),
                     "executable_path": str(self.chrome_executable_path),
-                    "args": ["--disable-blink-features=AutomationControlled"],
+                    "args": [
+                        "--disable-blink-features=AutomationControlled",
+                        "--disk-cache-size=%d" % 524288000,  # 500 MB
+                    ],
                     "viewport": {"width": 1920, "height": 1080},
                     "locale": "en-US,en,ru",
                     "geolocation": {
@@ -167,7 +170,7 @@ class OzonDataQuerySpider(scrapy.Spider):
             assert isinstance(entry, dict)
             ordered_entry = {
                 "_keyword": self.initial_keyword,
-                "_scraped_at": datetime.utcnow().isoformat(),
+                "_scraped_at": datetime.datetime.now(datetime.UTC).isoformat(),
             }
             ordered_entry.update(entry)
             item = OzonCollectorItem(**ordered_entry)
