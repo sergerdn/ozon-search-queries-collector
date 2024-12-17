@@ -8,10 +8,15 @@ and related search behavior on the Ozon marketplace.
 
 ## **Features**
 
-This project collects detailed search query data from Ozon, including:
+This project collects detailed search query data from Ozon:
+
+### Meta data:
 
 - **`_keyword`**: The initial keyword used to generate the data.
 - **`_scraped_at`**: Timestamp of when the data was scraped.
+
+### Scraped data:
+
 - **`avgCaRub`**: Average price (in rubles) per query, representing the typical price range for products
   associated with the search query.
 - **`avgCountItems`**: The average number of products appearing in search results for the query.
