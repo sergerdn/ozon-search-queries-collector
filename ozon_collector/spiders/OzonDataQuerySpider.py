@@ -208,7 +208,7 @@ class OzonDataQuerySpider(scrapy.Spider):
     )
     async def _render_execute_and_get_items(self, page: Page, query_keyword: str) -> List[OzonCollectorItem]:
         """Render the JS for a query, execute it, and yield items."""
-        template = self.jinja2_env.get_template("collect_search_queries.js.j2")
+        template = self.jinja2_env.get_template("collect_search_queries_sequential.js")
         rendered_js = template.render(
             keyword_query=query_keyword,
             max_retries=5,
@@ -250,6 +250,7 @@ class OzonDataQuerySpider(scrapy.Spider):
 
         # Listen for browser console messages
         page.on("console", handle_console)
+        await page.reload()
 
         page_url = page.url
         self.logger.debug(f"Current URL: {page_url}, page:{page}, context: {context}")
@@ -268,18 +269,18 @@ class OzonDataQuerySpider(scrapy.Spider):
             after=after_log(logger, logging.DEBUG),
             reraise=True,  # Reraise the exception if retries fail
         )
-        async def check_app_requests_limit(p: Page, l: SpiderLoggerAdapter) -> None:
+        async def check_app_requests_limit(p: Page, log: SpiderLoggerAdapter) -> None:
             await p.reload()
             # Check if the request limit has been exceeded
             if p.url == "https://data.ozon.ru/app/requests-limit":
-                l.warning("Request limit exceeded. Raising exception.")
+                log.warning("Request limit exceeded. Raising exception.")
                 raise RequestLimitExceededException("Ozon request limit reached.")
 
         # Wait for the user to log in if necessary
         expected_url = "https://data.ozon.ru/app/search-queries"
         while not page.url.startswith(expected_url):
             # Check if the request limit has been exceeded
-            await check_app_requests_limit(p=page, l=self.logger)
+            await check_app_requests_limit(p=page, log=self.logger)
 
             self.logger.warning("User is not logged in to Ozon.")
             self.logger.info("Please log in to Ozon with your credentials.")
