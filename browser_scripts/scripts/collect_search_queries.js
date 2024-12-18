@@ -94,7 +94,7 @@
 
       const initialData = await fetchWithRetry(initialRequestBody);
       totalItems = parseInt(initialData.total, 10);
-      console.log(`[Info] Total items to fetch: ${totalItems}`);
+      console.log(`[Info] Total items to fetch: ${totalItems}, for "${keyword_query}"`);
 
       // Step 2: Generate all offset-based requests
       const totalRequests = Math.ceil(totalItems / paginationLimit);
