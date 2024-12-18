@@ -194,12 +194,14 @@ class OzonDataQuerySpider(scrapy.Spider):
         self.logger.info("Executing JavaScript in the browser.")
         return await page.evaluate(rendered_js)
 
-    # Apply retry logic with Tenacity
+    # Apply retry logic with Tenacity and exponential backoff
     @retry(
         retry=retry_if_exception_type(Exception),
-        stop=stop_after_attempt(5),  # Retry up to 5 times
-        wait=wait_exponential(multiplier=1, min=4, max=10),  # Exponential backoff
-        before=before_log(logger, logging.DEBUG),  # Log before each retry attempt
+        # Retry up to 10 times
+        stop=stop_after_attempt(10),
+        # Exponential backoff with minimum delay of 5 minutes and max delay of 60 minutes
+        wait=wait_exponential(multiplier=1, min=60 * 5, max=60 * 60),  # min 5 minutes, max 60 minutes
+        before=before_log(logger, logging.DEBUG),
         after=after_log(logger, logging.DEBUG),
         reraise=True,  # Reraise the exception if retries fail
     )
@@ -287,9 +289,15 @@ class OzonDataQuerySpider(scrapy.Spider):
                 url = "https://data.ozon.ru/app/search-queries?__%s" % quote_plus(query_keyword)
                 # Change the URL in the browser's address bar without reloading
                 await page.evaluate(f"window.history.pushState(null, '', '{url}')")
-                await asyncio.sleep(5)
+                await asyncio.sleep(10)
 
-                items = await self._render_execute_and_get_items(page, query_keyword)
+                while True:
+                    try:
+                        items = await self._render_execute_and_get_items(page, query_keyword)
+                    except Exception as e:
+                        self.logger.error(e)
+                        breakpoint()
+                    break
 
                 for item in items:
                     # Skip processing if the item’s query already matches the current query_keyword
