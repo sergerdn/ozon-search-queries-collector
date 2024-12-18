@@ -6,11 +6,13 @@
 #     https://docs.scrapy.org/en/latest/topics/settings.html
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
+import logging
 import os
 from pathlib import Path
 from typing import List
 
 from dotenv import load_dotenv
+from playwright.async_api import Request
 
 from .utils import get_browser_profile_storage, get_chrome_executable_path
 
@@ -18,6 +20,8 @@ ABS_PATH: Path = Path(os.path.dirname(os.path.abspath(__file__))).parent
 enf_filename = ABS_PATH / ".env.development"
 assert enf_filename.exists()
 load_dotenv(enf_filename)
+
+logger = logging.getLogger(__name__)
 
 BOT_NAME = "ozon_collector"
 
@@ -133,3 +137,37 @@ GOOGLE_CHROME_EXECUTABLE_PATH = get_chrome_executable_path()
 
 TEMPLATES_DIR: Path = Path(os.path.dirname(os.path.abspath(__file__))) / "spiders" / "templates"
 assert TEMPLATES_DIR.exists()
+
+
+def should_abort_request(request: Request) -> bool:
+    """Check if the request should be aborted based on URL and resource type."""
+
+    # Define a list of URL prefixes to block
+    blocked_urls = [
+        "https://sentry.ozon.ru",
+        "https://data.ozon.ru/app/csp-report?",
+        "https://cdns.ozon.ru/v1/mc",
+        "https://cdns.ozon.ru/v1/lg",
+        "https://xapi.ozon.ru/dlte/multi",
+    ]
+
+    # Block requests based on resource type (e.g., images)
+    if request.resource_type == "image":
+        logger.debug(f"Blocked image request: {request.url}")
+        return True
+
+    # Check if the request URL matches any of the blocked URL prefixes
+    for blocked_url in blocked_urls:
+        if request.url.startswith(blocked_url):
+            logger.debug(f"Blocked request: {request.url}")
+            return True
+
+    # Optionally, log requests that aren't blocked for monitoring
+    logger.debug(f"Allowed request: {request.url}")
+
+    # If no conditions match, allow the request
+    return False
+
+
+# https://github.com/scrapy-plugins/scrapy-playwright?tab=readme-ov-file#playwright_abort_request
+PLAYWRIGHT_ABORT_REQUEST = should_abort_request
