@@ -23,7 +23,12 @@ if __name__ == "__main__":
         settings.set("DEPTH_LIMIT", 1)
 
         process = CrawlerProcess(settings=settings)
-        process.crawl(OzonDataQuerySpider, initial_query_keyword="сыр", parse_in_depth=True)
+        process.crawl(
+            OzonDataQuerySpider,
+            initial_query_keyword="сыр",
+            parse_in_depth=True,
+            query_popularity_threshold=10,
+        )
         process.start()
 
     main()

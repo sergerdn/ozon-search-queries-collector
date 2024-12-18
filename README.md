@@ -62,7 +62,7 @@ scrapy crawl ozon_data_query_spider -a initial_query_keyword="дозатор д�
 To enable **depth parsing** (i.e., parsing multiple queries from the initial search result), use the following command:
 
 ```bash
-scrapy crawl ozon_data_query_spider -a initial_query_keyword="дозатор для жидкого мыла" -o items.json -a parse_in_depth=True
+scrapy crawl ozon_data_query_spider -a initial_query_keyword="дозатор для жидкого мыла" -o items.json -a parse_in_depth=True -a query_popularity_threshold=10
 ```
 
 ### **First-Time Setup**

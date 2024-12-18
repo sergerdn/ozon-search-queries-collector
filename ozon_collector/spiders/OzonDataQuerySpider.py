@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import logging
 import random
@@ -10,6 +11,7 @@ import scrapy
 from jinja2 import Environment, FileSystemLoader
 from playwright.async_api import BrowserContext
 from playwright.sync_api import Page
+from pydantic import TypeAdapter
 from scrapy import signals
 from scrapy.http.request import Request
 from scrapy.http.response import Response
@@ -77,21 +79,32 @@ class OzonDataQuerySpider(scrapy.Spider):
     jinja2_env: Environment
 
     parse_in_depth: bool  # Flag to control depth of parsing
+    query_popularity_threshold: int  # Minimum popularity score for deep parsing.
 
     def __init__(
-        self, initial_query_keyword: str = "", parse_in_depth: bool = False, *args: Any, **kwargs: Any
+        self,
+        initial_query_keyword: str = "",
+        parse_in_depth: bool = False,
+        query_popularity_threshold: int = 10,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         """Initialize the spider with the provided initial keyword and required configurations.
 
         Args:
             initial_query_keyword (str): The keyword to start data collection. Defaults to an empty string.
+            parse_in_depth (bool): Flag to control whether deep parsing is performed.
+            query_popularity_threshold (int): The threshold for query popularity to filter out low-popularity queries.
         """
         super().__init__(*args, **kwargs)
         dispatcher.connect(self.spider_idle_handler, signal=signals.spider_idle)
 
         self.initial_query_keyword = initial_query_keyword.strip()
         self.logger.info("Initial query keyword: %s", self.initial_query_keyword)
-        self.parse_in_depth = parse_in_depth
+        self.parse_in_depth = TypeAdapter(bool).validate_python(parse_in_depth)
+        self.logger.info("Parse in depth: %s", self.parse_in_depth)
+        self.query_popularity_threshold = TypeAdapter(int).validate_python(query_popularity_threshold)
+        self.logger.info("Query popularity threshold: %d", self.query_popularity_threshold)
 
         # Get Scrapy settings
         settings = get_project_settings()
@@ -254,7 +267,10 @@ class OzonDataQuerySpider(scrapy.Spider):
 
         items = await self._render_execute_and_get_items(page, query_keyword)
         for item in items:
-            parsed_keywords.add(item["query"])
+            # Get the popularity score for the current query
+            popularity = int(item.get("count", 0))
+            if popularity >= self.query_popularity_threshold:
+                parsed_keywords.add(item["query"])
             yield item
 
         # Collect the keywords parsed during this step
@@ -265,8 +281,14 @@ class OzonDataQuerySpider(scrapy.Spider):
                 url = "https://data.ozon.ru/app/search-queries?__%s" % quote_plus(query_keyword)
                 # Change the URL in the browser's address bar without reloading
                 await page.evaluate(f"window.history.pushState(null, '', '{url}')")
+                await asyncio.sleep(5)
 
                 items = await self._render_execute_and_get_items(page, query_keyword)
+                # If only one item is returned, it means we're only getting info for this specific query,
+                # and we already have that information, so skip processing for this keyword
+                if len(items) == 1:
+                    continue
+
                 for item in items:
                     yield item
 
