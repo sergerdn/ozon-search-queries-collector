@@ -287,15 +287,15 @@ class OzonDataQuerySpider(scrapy.Spider):
                 url = "https://data.ozon.ru/app/search-queries?__%s" % quote_plus(query_keyword)
                 # Change the URL in the browser's address bar without reloading
                 await page.evaluate(f"window.history.pushState(null, '', '{url}')")
-                await asyncio.sleep(1)
+                await asyncio.sleep(5)
 
                 items = await self._render_execute_and_get_items(page, query_keyword)
-                # If only one item is returned, it means we're only getting info for this specific query,
-                # and we already have that information, so skip processing for this keyword
-                if len(items) == 1:
-                    continue
 
                 for item in items:
+                    # Skip processing if the item’s query already matches the current query_keyword
+                    if item.get("query") == query_keyword:
+                        continue
+
                     yield item
 
         self.logger.info("Finished.")
