@@ -9,7 +9,7 @@ from urllib.parse import quote_plus
 
 import scrapy
 from jinja2 import Environment, FileSystemLoader
-from playwright.async_api import BrowserContext, Page
+from playwright.async_api import BrowserContext, ConsoleMessage, Page
 from pydantic import TypeAdapter
 from scrapy import signals
 from scrapy.http.request import Request
@@ -240,6 +240,13 @@ class OzonDataQuerySpider(scrapy.Spider):
         """Parse the initial page and handle login if necessary."""
         page: Page = response.meta["playwright_page"]
         context: BrowserContext = page.context
+
+        # Define the callback to handle console messages
+        def handle_console(msg: ConsoleMessage) -> None:
+            self.logger.debug(f"[browser]: {msg}")
+
+        # Listen for browser console messages
+        page.on("console", handle_console)
 
         page_url = page.url
         self.logger.debug(f"Current URL: {page_url}, page:{page}, context: {context}")

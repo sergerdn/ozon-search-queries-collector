@@ -27,7 +27,7 @@ if __name__ == "__main__":
             OzonDataQuerySpider,
             initial_query_keyword="сыр",
             parse_in_depth=True,
-            query_popularity_threshold=10,
+            query_popularity_threshold=0,
         )
         process.start()
 
