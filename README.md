@@ -62,7 +62,8 @@ scrapy crawl ozon_data_query_spider -a initial_query_keyword="дозатор д�
 To enable **depth parsing** (i.e., parsing multiple queries from the initial search result), use the following command:
 
 ```bash
-scrapy crawl ozon_data_query_spider -a initial_query_keyword="дозатор для жидкого мыла" -o items.json -a parse_in_depth=True -a query_popularity_threshold=10
+scrapy crawl ozon_data_query_spider -a initial_query_keyword="дозатор для жидкого мыла" \
+       -o items.json -a parse_in_depth=True -a query_popularity_threshold=10
 ```
 
 ### **First-Time Setup**
@@ -168,9 +169,41 @@ INFO: Crawled 1 pages (at 0 pages/min), scraped 4502 items (at 345 items/min)
 
 ---
 
+## Spider Performance
+
+The collection time of the spider depends on factors like the number of accounts used, network speed, and other
+variables.
+
+For example, when running the spider with the following settings:
+
+```bash
+scrapy crawl ozon_data_query_spider -a initial_query_keyword="дозатор для жидкого мыла" \
+       -o items.json -a parse_in_depth=True -a query_popularity_threshold=50
+```
+
+The spider worked for approximately **10 minutes**, and around **10,000 items** were collected.
+
+### Example Calculation
+
+If Ozon allows collecting **10,000 queries per account per 24 hours**:
+
+- **With 100 browsers** running, processing **10 million keywords** would take approximately **34.7 days**, and you
+  would need **29 accounts**.
+
+- **With 500 browsers** running, processing **40 million keywords** would take approximately **6.94 days**, and you
+  would need **116 accounts**.
+
+**Note**: These calculations are estimated based on sample test data and may vary depending on factors like network
+speed, server load, and other conditions.
+
+---
+
 ## Tips and Tricks
 
 It is very likely that Ozon uses an `anti-bot system to prevent scraping`.
+
+![We've detected suspicious activity](./docs/images/ozon_blocked_24h.png "We've detected suspicious activity")
+
 Here are some things to keep in mind when scraping Ozon:
 
 - **Multiple Browser Profiles**: If you run multiple browsers simultaneously using the same account across all browser
@@ -181,4 +214,5 @@ Here are some things to keep in mind when scraping Ozon:
   trigger Ozon anti-bot system, resulting in the account being logged out.
 - **High-Volume Scraping**: If a large volume of items is collected within a short time frame per account, Ozon may
   block the account for up to 24 hours.
-  ![We've detected suspicious activity](./docs/images/ozon_blocked_24h.png "We've detected suspicious activity")
+
+---
