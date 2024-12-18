@@ -15,6 +15,7 @@ from scrapy import signals
 from scrapy.http.request import Request
 from scrapy.http.response import Response
 from scrapy.signalmanager import dispatcher  # type: ignore[attr-defined]
+from scrapy.utils.log import SpiderLoggerAdapter
 from scrapy.utils.project import get_project_settings
 from tenacity import after_log, before_log, retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
@@ -256,19 +257,35 @@ class OzonDataQuerySpider(scrapy.Spider):
         # Log the page URL for debugging purposes
         self.logger.info(f"Current page URL: {page_url}")
 
+        # Apply retry logic with Tenacity and exponential backoff
+        @retry(
+            retry=retry_if_exception_type(RequestLimitExceededException),
+            # Retry up to 10 times
+            stop=stop_after_attempt(10),
+            # Exponential backoff with minimum delay of 5 minutes and max delay of 60 minutes
+            wait=wait_exponential(multiplier=1, min=60 * 5, max=60 * 60),  # min 5 minutes, max 60 minutes
+            before=before_log(logger, logging.DEBUG),
+            after=after_log(logger, logging.DEBUG),
+            reraise=True,  # Reraise the exception if retries fail
+        )
+        async def check_app_requests_limit(p: Page, l: SpiderLoggerAdapter) -> None:
+            await p.reload()
+            # Check if the request limit has been exceeded
+            if p.url == "https://data.ozon.ru/app/requests-limit":
+                l.warning("Request limit exceeded. Raising exception.")
+                raise RequestLimitExceededException("Ozon request limit reached.")
+
         # Wait for the user to log in if necessary
         expected_url = "https://data.ozon.ru/app/search-queries"
         while not page.url.startswith(expected_url):
-            # Check if the page has reached the request limit
-            if page.url == "https://data.ozon.ru/app/requests-limit":
-                self.logger.warning("Request limit exceeded. Raising exception.")
-                raise RequestLimitExceededException("Ozon request limit reached.")
+            # Check if the request limit has been exceeded
+            await check_app_requests_limit(p=page, l=self.logger)
 
             self.logger.warning("User is not logged in to Ozon.")
             self.logger.info("Please log in to Ozon with your credentials.")
             breakpoint()  # Pause for manual intervention
 
-        self.logger.info("User successfully logged in.")
+        logger.info("User successfully logged in.")
 
         query_keyword = response.meta["query_keyword"]
         parsed_keywords: Set[str] = set()
