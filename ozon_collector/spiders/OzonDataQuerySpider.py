@@ -127,10 +127,10 @@ class OzonDataQuerySpider(scrapy.Spider):
             profiles.append(default_profile)
 
         # Configure Jinja2 environment
-        templates_dir: Path = settings.get("TEMPLATES_DIR")
-        if not templates_dir or not templates_dir.exists():
-            raise ValueError("Template directory path is not set or invalid.")
-        self.jinja2_env = Environment(loader=FileSystemLoader(templates_dir))
+        j2_templates_dir: Path = settings.get("J2_TEMPLATES_DIR")
+        if not j2_templates_dir or not j2_templates_dir.exists():
+            raise ValueError("Jinja2 template directory path is not set or invalid.")
+        self.jinja2_env = Environment(loader=FileSystemLoader(j2_templates_dir))
 
     def spider_idle_handler(self) -> None:
         """This handler is called when Scrapy is idle, i.e., when there are no more requests left in the queue to

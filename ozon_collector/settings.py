@@ -135,8 +135,8 @@ PLAYWRIGHT_DEFAULT_NAVIGATION_TIMEOUT = 30 * 1000  # 30 seconds
 BROWSER_PROFILE_STORAGE_DIR = get_browser_profile_storage()
 GOOGLE_CHROME_EXECUTABLE_PATH = get_chrome_executable_path()
 
-TEMPLATES_DIR: Path = Path(os.path.dirname(os.path.abspath(__file__))) / "spiders" / "templates"
-assert TEMPLATES_DIR.exists()
+J2_TEMPLATES_DIR: Path = Path(os.path.dirname(os.path.abspath(__file__))) / "spiders" / "j2_templates"
+assert J2_TEMPLATES_DIR.exists()
 
 
 def should_abort_request(request: Request) -> bool:
