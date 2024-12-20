@@ -35,4 +35,15 @@ lint_fix:
 lint:
 	poetry check
 	poetry run mypy ozon_collector/ main.py
-	poetry run flake8  ozon_collector/ main.py
+	poetry run flake8 ozon_collector/ main.py
+
+check_env:
+	@if [ -z "$(BROWSER_PROFILE_STORAGE_DIR)" ]; then \
+        echo "Error: BROWSER_PROFILE_STORAGE_DIR is not set!"; \
+        exit 1; \
+    fi
+
+dev_scrapy_crawl: check_env
+	poetry run scrapy crawl ozon_data_query_spider -a initial_query_keyword="" \
+		-o items.json -a parse_in_depth=True -a query_popularity_threshold=0 \
+		--logfile ozon_data_query_spider.log
