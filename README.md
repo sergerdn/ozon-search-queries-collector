@@ -6,7 +6,7 @@ and related search behavior on the Ozon marketplace.
 
 ![What to Sell on Ozon](./docs/images/data_ozon_ru_search_queries.png "What to Sell on Ozon")
 
-## **Features**
+## Features
 
 This project collects detailed search query data from Ozon:
 
@@ -28,15 +28,15 @@ This project collects detailed search query data from Ozon:
 - **`uniqQueriesWCa`**: The number of unique queries where users added products to their cart.
 - **`uniqSellers`**: The number of unique sellers offering products related to the query.
 
-## **Setup**
+## Setup
 
-### **Prerequisites**
+### Prerequisites
 
 - Python 3.10+.
 - Poetry.
 - Google Chrome.
 
-### **Installation**
+### Installation
 
 1. Clone the repository:
    ```bash
@@ -51,7 +51,16 @@ This project collects detailed search query data from Ozon:
 3. Configure your environment variables in `.env.development`:
     - `BROWSER_PROFILE_STORAGE_DIR`: Directory for persistent browser profiles.
 
-### **Usage**
+### Usage
+
+**NOTE**: If you're running the spider from the command line, make sure the required environment variables are correctly
+set. You can set them manually using the following command:
+
+```bash
+export BROWSER_PROFILE_STORAGE_DIR="/path/to/directory"
+```
+
+This will ensure the necessary environment variables are available for the spider to run correctly.
 
 To run the spider with an initial keyword and output the results to a file, use the following command:
 
@@ -66,7 +75,7 @@ scrapy crawl ozon_data_query_spider -a initial_query_keyword="дозатор д�
        -o items.json -a parse_in_depth=True -a query_popularity_threshold=10
 ```
 
-### **First-Time Setup**
+### First-Time Setup
 
 When running the script for the first time, you need to **log in manually** to the Ozon analytics service to grant the
 spider access to the necessary data.
@@ -88,7 +97,7 @@ Follow these steps:
 
 From the second run onward, the script will reuse the saved session to access the Ozon service.
 
-## **Output**
+## Output
 
 The output will be in JSON format, containing structured data for the keyword and its related search queries.
 
@@ -123,24 +132,24 @@ Example:
 ]
 ```
 
-## **Project Components**
+## Project Components
 
-### **Spiders**
+### Spiders
 
 - **`ozon_data_query_spider`**:
     - The main spider used to scrape Ozon search query data.
     - Supports Playwright for handling dynamic pages.
 
-### **Templates**
+### Templates
 
 - Jinja2 templates are used to inject dynamic JavaScript for data extraction.
 
-### **Items**
+### Items
 
 - **`OzonCollectorItem`**:
     - Defines the structure for the scraped data.
 
-## **Logs and Execution Time**
+## Logs and Execution Time
 
 The spider includes enhanced logging and execution time tracking for debugging and performance monitoring.
 

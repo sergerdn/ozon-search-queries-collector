@@ -1,6 +1,11 @@
+import logging
 import os
 import platform
 from pathlib import Path
+
+from pydantic import TypeAdapter
+
+logger = logging.getLogger(__name__)
 
 
 def get_chrome_executable_path() -> Path:
@@ -24,11 +29,13 @@ def get_browser_profile_storage() -> Path:
 
     Raise an exception if the environment variable is not set.
     """
-    storage_dir_env = os.getenv("BROWSER_PROFILE_STORAGE")
+    storage_dir_env = os.getenv("BROWSER_PROFILE_STORAGE_DIR")
+    logger.debug(f"BROWSER_PROFILE_STORAGE_DIR: {storage_dir_env}")
     if not storage_dir_env or storage_dir_env is None:
-        raise EnvironmentError("BROWSER_PROFILE_STORAGE environment variable is not set.")
+        raise EnvironmentError("BROWSER_PROFILE_STORAGE_DIR environment variable is not set.")
 
-    storage_dir: Path = Path(storage_dir_env)
+    storage_dir_env = os.path.abspath(storage_dir_env)
+    storage_dir: Path = TypeAdapter(Path).validate_python(storage_dir_env)
     assert storage_dir.exists() and storage_dir.is_dir()
 
     return storage_dir

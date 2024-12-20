@@ -5,6 +5,10 @@ It configures the Scrapy project settings dynamically, initializes the crawler, 
 executes the `OzonDataQuerySpider`.
 """
 
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
 from rich import print
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
@@ -12,6 +16,10 @@ from scrapy.utils.project import get_project_settings
 from ozon_collector.spiders.OzonDataQuerySpider import OzonDataQuerySpider
 
 if __name__ == "__main__":
+    ABS_PATH: Path = Path(os.path.dirname(os.path.abspath(__file__)))
+    enf_filename = ABS_PATH / ".env.development"
+    assert enf_filename.exists()
+    load_dotenv(enf_filename)
 
     def main() -> None:
         settings = get_project_settings()

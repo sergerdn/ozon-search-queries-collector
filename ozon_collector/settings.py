@@ -11,15 +11,12 @@ import os
 from pathlib import Path
 from typing import List
 
-from dotenv import load_dotenv
 from playwright.async_api import Request
 
 from .utils import get_browser_profile_storage, get_chrome_executable_path
 
 ABS_PATH: Path = Path(os.path.dirname(os.path.abspath(__file__))).parent
-enf_filename = ABS_PATH / ".env.development"
-assert enf_filename.exists()
-load_dotenv(enf_filename)
+
 
 logger = logging.getLogger(__name__)
 
