@@ -21,7 +21,7 @@ pydantic = "2.10.3"
 twisted = {extras = ["http2"], version = "^24.11.0"}
 
 [tool.poetry.group.dev.dependencies]
-black = "24.10.0"
+black = "25.1.0"
 isort = "5.13.2"
 docconvert = "2.2.0"
 docformatter = "1.7.5"
